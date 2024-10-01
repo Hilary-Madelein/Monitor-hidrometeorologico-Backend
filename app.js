@@ -5,6 +5,8 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index').router;  // Importar solo el router
 var usersRouter = require('./routes/users');
 const cors = require('cors');
+var createError = require('http-errors');
+
 
 var app = express();
 
@@ -38,5 +40,20 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+app.use(function(req, res, next) {
+  next(createError(404));  // Lanza un error 404 si no se encuentra la ruta
+});
+
+
+app.use(function(err, req, res, next) {
+  // Establece los valores por defecto para los errores
+  res.status(err.status || 500);
+  res.json({
+    message: err.message,
+    error: err
+  });
+});
+
 
 module.exports = app;
