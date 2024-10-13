@@ -274,13 +274,12 @@ class MedidaController {
                     code: 404
                 });
             }
-    
-            // Control de valores anómalos: Definimos un rango válido para las medidas
+
             const esValorValido = (valor, umbral) => {
                 return valor !== null && valor !== undefined && !isNaN(valor) && Math.abs(valor) < umbral;
             };
     
-            const umbralMaximo = 1e6; // Umbral máximo para valores fuera de rango
+            const umbralMaximo = 1e6;
     
             // Agrupar y filtrar datos anómalos
             const medidasAgrupadasPorDia = items.reduce((acc, item) => {
@@ -675,10 +674,10 @@ class MedidaController {
             };
     
             const limites = {
-                Temperatura: { min: -50, max: 100 }, // Ejemplo: temperatura en grados Celsius
-                Humedad: { min: 0, max: 100 },      // Humedad en porcentaje
-                Presion: { min: 50, max: 2100 },   // Presión en hPa (hectopascales)
-                Lluvia: { min: 0, max: 2000 }       // Lluvia acumulada en mm
+                Temperatura: { min: -50, max: 100 }, 
+                Humedad: { min: 0, max: 100 },      
+                Presion: { min: 50, max: 2100 },  
+                Lluvia: { min: 0, max: 2000 }   
             };
     
             items.forEach(item => {
@@ -736,7 +735,130 @@ class MedidaController {
                 info: error.message
             });
         }
-    }     
+    }
+    
+    async getDatosClimaticosMensual(req, res) {
+        try {
+            
+            
+            const { escalaDeTiempo } = req.body;
+
+            console.log("filtro aqui", escalaDeTiempo);
+    
+            if (!escalaDeTiempo || escalaDeTiempo !== 'mensual') {
+                return res.status(400).json({
+                    msg: 'Debe proporcionar una escala de tiempo válida. En este caso, solo se acepta "mensual".',
+                    code: 400
+                });
+            }
+    
+            const containers = await getAllContainers();
+    
+            if (!containers || containers.length === 0) {
+                return res.status(404).json({
+                    msg: 'No se encontraron estaciones registradas',
+                    code: 404
+                });
+            }
+    
+            const containerId = containers[0];
+            const database = client.database(databaseId);
+            const container = database.container(containerId);
+    
+            const query = {
+                query: `
+                    SELECT 
+                        c["Fecha_local_UTC-5"] AS fecha,
+                        c.Temperatura,
+                        c.Humedad,
+                        c.Presion,
+                        c.Lluvia
+                    FROM c`
+            };
+    
+            const { resources: items } = await container.items.query(query).fetchAll();
+    
+            if (items.length === 0) {
+                return res.status(404).json({
+                    msg: 'No se encontraron datos climáticos',
+                    code: 404
+                });
+            }
+    
+            const datosPorMes = {};
+    
+            // Función de validación de valores anómalos
+            const esValorValido = (valor, umbral) => {
+                return valor !== null && valor !== undefined && !isNaN(valor) && Math.abs(valor) < umbral;
+            };
+    
+            const umbralMaximo = 1e6; // Umbral para valores fuera de rango
+    
+            items.forEach(item => {
+                const fecha = new Date(item.fecha);
+                const mes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+    
+                if (!datosPorMes[mes]) {
+                    datosPorMes[mes] = {
+                        temperaturas: [],
+                        humedades: [],
+                        presiones: [],
+                        lluvias: []
+                    };
+                }
+    
+                if (esValorValido(item.Temperatura, umbralMaximo)) {
+                    datosPorMes[mes].temperaturas.push(item.Temperatura);
+                }
+                if (esValorValido(item.Humedad, umbralMaximo)) {
+                    datosPorMes[mes].humedades.push(item.Humedad);
+                }
+                if (esValorValido(item.Presion, umbralMaximo)) {
+                    datosPorMes[mes].presiones.push(item.Presion);
+                }
+                if (esValorValido(item.Lluvia, umbralMaximo)) {
+                    datosPorMes[mes].lluvias.push(item.Lluvia);
+                }
+            });
+    
+            const resultadosPorMes = Object.keys(datosPorMes).map(mes => {
+                const datosMes = datosPorMes[mes];
+                const promedioTemperatura = datosMes.temperaturas.length ? datosMes.temperaturas.reduce((acc, val) => acc + val, 0) / datosMes.temperaturas.length : 0;
+                const maxTemperatura = datosMes.temperaturas.length ? Math.max(...datosMes.temperaturas) : null;
+                const minTemperatura = datosMes.temperaturas.length ? Math.min(...datosMes.temperaturas) : null;
+                const promedioHumedad = datosMes.humedades.length ? datosMes.humedades.reduce((acc, val) => acc + val, 0) / datosMes.humedades.length : 0;
+                const promedioPresion = datosMes.presiones.length ? datosMes.presiones.reduce((acc, val) => acc + val, 0) / datosMes.presiones.length : 0;
+                const sumaLluvia = datosMes.lluvias.length ? datosMes.lluvias.reduce((acc, val) => acc + val, 0) : 0;
+    
+                return {
+                    mes,
+                    promedioTemperatura,
+                    maxTemperatura,
+                    minTemperatura,
+                    promedioHumedad,
+                    promedioPresion,
+                    sumaLluvia
+                };
+            });
+    
+            res.status(200).json({
+                msg: 'OK!',
+                code: 200,
+                container: containerId,
+                info: resultadosPorMes
+            });
+    
+        } catch (error) {
+            return res.status(500).json({
+                msg: 'Se produjo un error al listar los datos climáticos por escala mensual',
+                code: 500,
+                info: error.message
+            });
+        }
+    }
+    
+    
+    
 
 }
 

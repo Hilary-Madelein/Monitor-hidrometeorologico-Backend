@@ -17,6 +17,7 @@ router.get('/listar/ultimaMedida', medidaController.getUltimaMedicion);
 router.post('/listar/medidas/escala', medidaController.getDatosClimaticosPorEscala);
 router.post('/listar/todasMedidas/escala', medidaController.getAllDatosClimaticosPorEscala);
 router.post('/listar/temperatura/mensual', medidaController.getDatosClimaticosPorEscalaMensual);
+router.post('/listar/temperatura/mensual/datos', medidaController.getDatosClimaticosMensual);
 
 
 module.exports = router;
