@@ -18,21 +18,29 @@ const databaseId = "PUEAR";
 // Crear cliente de Cosmos
 const client = new CosmosClient({ endpoint, key });
 
-// Ruta para verificar la clave y conectarse a Cosmos DB
 router.get('/privado/:external', async function(req, res, next) {
   const llave = req.params.external;
   const envKey = process.env.KEY_SQ;  
 
+  console.log("Llave recibida:", llave);  // Imprimir la llave recibida
+  console.log("Llave esperada (desde .env):", envKey);  // Imprimir la llave esperada desde .env
+
   if (llave === envKey) {
     try {
-      // Establecer conexión con la base de datos
+      // Conexión a Cosmos DB
       const database = client.database(databaseId);
-      console.log(`Conectado a la base de datos: ${databaseId}`);
-      res.status(200).send(`Conectado a la base de datos: ${databaseId}`);
+      console.log(`Conectado a la base de datos Cosmos: ${databaseId}`);
+      
+      // Conexión a MySQL
+      var models = require('./../models');  // Cargar el modelo para MySQL
+      await models.sequelize.sync();  // Conectar y sincronizar MySQL
+      console.log('Se ha conectado a MySQL');
+
+      res.status(200).send(`Conectado a la base de datos Cosmos: ${databaseId} y MySQL`);
     } catch (err) {
-      console.error('Error conectando a Cosmos DB:', err);
+      console.error('Error conectando a Cosmos DB o MySQL:', err);
       res.status(500).json({
-        message: 'Error conectando a la base de datos',
+        message: 'Error conectando a las bases de datos',
         error: err.message
       });
     }
@@ -40,6 +48,7 @@ router.get('/privado/:external', async function(req, res, next) {
     res.status(401).json({ message: 'Llave incorrecta!' });
   }
 });
+
 
 async function getAllContainers() {
   try {
