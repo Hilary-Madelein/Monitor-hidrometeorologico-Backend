@@ -13,7 +13,7 @@ class MedidaController {
                 });
             }
 
-            const containerId = containers[0];
+            const containerId = containers[1];
             const database = client.database(databaseId);
             const container = database.container(containerId);
 
@@ -226,9 +226,8 @@ class MedidaController {
             });
         }
     }   
-    
   
-    async getMedidasPromediadasPorMes(req, res) {
+    /*async getMedidasPromediadasPorMes(req, res) {
         try {
             const { mes, anio } = req.body;
     
@@ -366,11 +365,7 @@ class MedidaController {
                 info: error.message
             });
         }
-    }
-    
-        
-
-    /******************* CONTROLES PARA TEMPERATURA ***************/
+    }*/
 
     async getDatosClimaticosPorEscala(req, res) {
         try {
@@ -527,6 +522,7 @@ class MedidaController {
         try {
             const { escalaDeTiempo } = req.body;
     
+            // Validación inicial
             if (!escalaDeTiempo) {
                 return res.status(400).json({
                     msg: 'Debe proporcionar una escala de tiempo válida (15min, 30min, hora, diaria).',
@@ -546,13 +542,20 @@ class MedidaController {
             const database = client.database(databaseId);
             const container = database.container(containerId);
     
+            // Calcular el rango de fechas basado en la escala de tiempo
             const ahora = new Date();
             let fechaInicio;
-            
+    
             switch (escalaDeTiempo) {
-                case '15min': fechaInicio = new Date(ahora.getTime() - 15 * 60000 - 300 * 60000); break;
-                case '30min': fechaInicio = new Date(ahora.getTime() - 30 * 60000 - 300 * 60000); break;
-                case 'hora': fechaInicio = new Date(ahora.getTime() - 60 * 60000 - 300 * 60000); break;
+                case '15min':
+                    fechaInicio = new Date(ahora.getTime() - 15 * 60000 - 300 * 60000);
+                    break;
+                case '30min':
+                    fechaInicio = new Date(ahora.getTime() - 30 * 60000 - 300 * 60000);
+                    break;
+                case 'hora':
+                    fechaInicio = new Date(ahora.getTime() - 60 * 60000 - 300 * 60000);
+                    break;
                 case 'diaria':
                     fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
                     fechaInicio.setTime(fechaInicio.getTime() - 300 * 60000);
@@ -564,42 +567,36 @@ class MedidaController {
                     });
             }
     
-            const fechaFin = new Date(ahora.getTime() - 300 * 60000); 
+            const fechaFin = new Date(ahora.getTime() - 300 * 60000);
             const fechaInicioISO = fechaInicio.toISOString();
             const fechaFinISO = fechaFin.toISOString();
     
-            const medidasConfig = {
-                Temperatura: ["AVG"],
-                Humedad: ["AVG"],
-                Presion: ["AVG"],
-                Lluvia: ["SUM"],
-                Nivel_de_agua: ["AVG", "MAX"],
-                Carga_H: ["AVG"],
-                Distancia_Hs: ["MIN", "MAX"]
-            };
-    
-            const selectClauses = ['c["Fecha_local_UTC-5"]'];
-            for (const [campo, operaciones] of Object.entries(medidasConfig)) {
-                operaciones.forEach(op => {
-                    const campoAlias = `${op.toLowerCase()}_${campo}`;
-                    selectClauses.push(`${op}(c.${campo}) AS ${campoAlias}`);
-                });
-            }
-    
+            // Consulta para obtener todos los registros en el rango de tiempo
             const query = {
-                query: `SELECT ${selectClauses.join(', ')} 
-                        FROM c 
-                        WHERE c["Fecha_local_UTC-5"] >= @inicio 
-                          AND c["Fecha_local_UTC-5"] <= @fin 
-                        GROUP BY c["Fecha_local_UTC-5"]
-                        ORDER BY c["Fecha_local_UTC-5"] DESC`,
+                query: `SELECT 
+                            c["Fecha_local_UTC-5"],
+                            c.Temperatura,
+                            c.Humedad,
+                            c.Presion,
+                            c.Lluvia,
+                            c.Nivel_de_agua,
+                            c.Carga_H,
+                            c.Distancia_Hs
+                        FROM c
+                        WHERE c["Fecha_local_UTC-5"] >= @inicio
+                          AND c["Fecha_local_UTC-5"] <= @fin
+                        ORDER BY c["Fecha_local_UTC-5"] ASC`,
                 parameters: [
                     { name: "@inicio", value: fechaInicioISO },
                     { name: "@fin", value: fechaFinISO }
                 ]
             };
     
+            console.log("Consulta generada:", query.query);
+            console.log("Parámetros:", query.parameters);
+    
             const { resources: items } = await container.items.query(query).fetchAll();
+    
             if (!items || items.length === 0) {
                 return res.status(404).json({
                     msg: `No se encontraron datos climáticos para el rango de tiempo proporcionado`,
@@ -607,49 +604,29 @@ class MedidaController {
                 });
             }
     
-            const umbralMaximo = 1e6; 
-            const esValorValido = (valor) => valor !== null && !isNaN(valor) && Math.abs(valor) < umbralMaximo;
-    
-            const datosPorHora = items.map(item => {
-                const fecha = item["Fecha_local_UTC-5"];
-                const horaExacta = new Date(fecha).toLocaleTimeString('es-ES', { hour12: false, timeZone: 'UTC' });
-                const medidas = {};
-    
-                for (const [campo, operaciones] of Object.entries(medidasConfig)) {
-                    operaciones.forEach(op => {
-                        const alias = `${op.toLowerCase()}_${campo}`;
-                        const valor = item[alias];
-                        if (esValorValido(valor)) {  // Solo incluir si el valor es válido y existe
-                            medidas[campo] = valor;
-                        }
-                    });
-                }
-    
-                return {
-                    hora: horaExacta,
-                    medidas
-                };
-            }).filter(dato => Object.keys(dato.medidas).length > 0);  // Filtrar solo datos con medidas válidas
-    
+            // Devolver todos los registros obtenidos
             return res.status(200).json({
                 msg: 'OK!',
                 code: 200,
                 container: containerId,
-                info: datosPorHora
+                info: items // Aquí se devuelve directamente la lista de registros
             });
     
         } catch (error) {
-            console.error('Error en getAllDatosClimaticosPorEscala:', error);
+            console.error('Error detallado:', JSON.stringify(error, null, 2));
             return res.status(500).json({
-                msg: 'Se produjo un error al listar los datos climáticos por escala de tiempo',
+                msg: 'Se produjo un error al listar los datos climáticos.',
                 code: 500,
                 info: error.message
             });
         }
     }
+    
+    
+    
        
     
-    async getDatosClimaticosPorEscalaMensual(req, res) {
+    /*async getDatosClimaticosPorEscalaMensual(req, res) {
         try {
             const { escalaDeTiempo } = req.body;
     
@@ -777,10 +754,10 @@ class MedidaController {
                 info: error.message
             });
         }
-    }   
+    }*/   
     
     
-    async getDatosClimaticosMensual(req, res) {
+    /*async getDatosClimaticosMensual(req, res) {
         try {
             const { escalaDeTiempo } = req.body;
     
@@ -898,11 +875,8 @@ class MedidaController {
                 info: error.message
             });
         }
-    }
-    
-    
-      
-           
+    }*/
+             
 }
 
 module.exports = MedidaController;

@@ -2,7 +2,7 @@
     "development":{
         "username":"desarrollo",
         "password":"desarrollo",
-        "database": "db_observatorio",
+        "database": "db_monitor",
         "host":"127.0.0.1",
         "dialect":"mysql",
         "operatorAliases":false

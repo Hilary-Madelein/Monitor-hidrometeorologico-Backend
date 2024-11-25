@@ -41,4 +41,8 @@ Object.keys(db).forEach((modelName) => {
 db.sequelize = sequelize;//son modelos
 db.Sequelize = Sequelize;//tipos de datos
 
+db.sequelize.sync().then(() => {
+    db.tipo_operacion.initializeDefaults();
+}).catch(error => console.log("Error al sincronizar la base de datos:", error));
+
 module.exports = db;

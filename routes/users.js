@@ -15,6 +15,12 @@ const MicrocuencaController = require('../controls/MicrocuencaController');
 var microcuencaController = new MicrocuencaController();
 const EstacionController = require('../controls/EstacionController');
 var estacionController = new EstacionController();
+const TipoMedidaController = require('../controls/TipoMedidaController');
+var tipoMedidaController = new TipoMedidaController();
+const MedicionController = require('../controls/MedicionController');
+var medicionController = new MedicionController();
+const MedidaEstacionController = require('../controls/MedidaEstacionController');
+var medidaEstacionController = new MedidaEstacionController();
 
 /* GET users listing. */
 router.get('/', function (req, res, next) {
@@ -105,10 +111,10 @@ const uploadFoto = (folderPath) => {
 };
 
 
-// Ejemplos de uso
 const uploadFotoPersona = uploadFoto('../public/images/users');
 const uploadFotoMicrocuenca = uploadFoto('../public/images/microcuencas');
 const uploadFotoEstacion = uploadFoto('../public/images/estaciones');
+const uploadIconoEstacion = uploadFoto('../public/images/icons_estaciones');
 
 // Ruta para obtener los últimos 10 registros de los contenedores EMA y EHA
 router.get('/listar/ultimasMedidasTen', medidaController.getUltimasTenMedidas);
@@ -116,12 +122,12 @@ router.get('/listar/ultimasMedidasTen', medidaController.getUltimasTenMedidas);
 
 /** RUTAS DE MEDIDA */
 router.post('/listar/medidas/diaria', medidaController.getMedidasPromediadasPorDia);
-router.post('/listar/medidas/mes', medidaController.getMedidasPromediadasPorMes);
+//router.post('/listar/medidas/mes', medidaController.getMedidasPromediadasPorMes);
 router.get('/listar/ultimaMedida', medidaController.getUltimaMedicion);
 router.post('/listar/medidas/escala', medidaController.getDatosClimaticosPorEscala);
 router.post('/listar/todasMedidas/escala', medidaController.getAllDatosClimaticosPorEscala);
-router.post('/listar/temperatura/mensual', medidaController.getDatosClimaticosPorEscalaMensual);
-router.post('/listar/temperatura/mensual/datos', medidaController.getDatosClimaticosMensual);
+//router.post('/listar/temperatura/mensual', medidaController.getDatosClimaticosPorEscalaMensual);
+//router.post('/listar/temperatura/mensual/datos', medidaController.getDatosClimaticosMensual);
 
 /**
  * RUTAS DE PERSONA
@@ -132,7 +138,7 @@ router.post('/guardar/entidad', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -150,7 +156,7 @@ router.put('/modificar/entidad', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -184,7 +190,7 @@ router.post('/guardar/microcuenca', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -202,7 +208,7 @@ router.put('/modificar/microcuenca', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -229,7 +235,7 @@ router.post('/guardar/estacion', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -247,7 +253,7 @@ router.put('/modificar/estacion', (req, res, next) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 2 MB.",
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
           code: 413
         });
       }
@@ -263,5 +269,61 @@ router.get('/listar/estacion', estacionController.listar);
 router.get('/listar/estacion/operativas', estacionController.listarOperativas);
 router.get('/obtener/estacion/:external',  estacionController.obtener);
 router.post('/estaciones/operativas/microcuenca', estacionController.obtenerPorMicrocuenca)
+
+/**
+ * RUTAS DE TIPOS DE MEDIDAS
+ */
+
+router.post('/guardar/tipo_medida', (req, res, next) => {
+  uploadIconoEstacion.single('foto')(req, res, (error) => {
+    if (error) {
+      if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
+          code: 413
+        });
+      }
+      return res.status(400).json({
+        msg: "Error al cargar el archivo: " + error,
+        code: 400
+      });
+    }
+    tipoMedidaController.guardar(req, res, next);
+  });
+});
+
+router.put('/modificar/tipo_medida', (req, res, next) => {
+  uploadIconoEstacion.single('foto')(req, res, (error) => {
+    if (error) {
+      if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          msg: "El archivo es demasiado grande. Por favor, sube un archivo de menos de 5 MB.",
+          code: 413
+        });
+      }
+      return res.status(400).json({
+        msg: "Error al cargar el archivo: " + error.message,
+        code: 400
+      });
+    }
+    tipoMedidaController.modificar(req, res, next);
+  });
+});
+router.get('/listar/tipo_medida', tipoMedidaController.listar);
+router.get('/obtener/tipo_medida/:external', tipoMedidaController.obtener);
+
+/**
+ * RUTAS DE MEDIDA ESTACION
+ */
+
+router.post('/asignar/medidas/estaciones', medidaEstacionController.asignarMedidasEstacion);
+
+/**
+ * RUTAS DE MEDICION CONTROLLER
+ */
+
+router.post('/medidas/mensuales/promediadas', medicionController.getDatosClimaticosPorEscala);
+router.post('/medidas/rango/promediadas', medicionController.getDatosClimaticosPorRango);
+router.post('/medidas/desglosemes/promediadas', medicionController.getDatosClimaticosPorMes);
 
 module.exports = router;
