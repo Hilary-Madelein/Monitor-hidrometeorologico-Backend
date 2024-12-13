@@ -1,0 +1,67 @@
+name: 02 Build pipeline
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      # Clonar el repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Configurar Node.js 14
+      - name: Set up Node.js 14
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14
+          cache: 'npm'
+
+      # Instalar dependencias
+      - name: Install dependencies
+        run: npm install
+
+      # Construir la aplicación
+      - name: Build the project
+        run: npm run build
+
+      # Ejecutar las pruebas
+      - name: Run tests
+        run: npm test
+
+      # Crear directorio para el binario generado
+      - name: Prepare binary artifact
+        run: mkdir -p candidate-binary && cp -r dist/* candidate-binary
+
+      # Crear directorio para resultados de las pruebas
+      - name: Prepare test results
+        run: mkdir -p test-results && cp -r test-results/**/*.xml test-results
+
+      # Subir binario como artefacto
+      - name: Upload Application Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: Application-Binary
+          path: candidate-binary
+
+      # Subir resultados de las pruebas como artefacto
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Test-Results
+          path: test-results
+
+      # Publicar resultados de pruebas
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2.0.0
+        if: always()
+        with:
+          junit_files: "test-results/**/*.xml"
