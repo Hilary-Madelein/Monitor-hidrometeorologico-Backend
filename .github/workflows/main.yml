@@ -1,4 +1,4 @@
-name: Node.js 14 Build Pipeline
+name: Main Observatorio CI Actions
 
 on:
   push:
@@ -9,33 +9,16 @@ on:
 
 permissions:
   contents: read
+  issues: read
+  checks: write
+  pull-requests: write
   actions: read
+  security-events: write
+  packages: write
 
 jobs:
   build:
-    name: Build Node.js 14
-    runs-on: ubuntu-latest
+    name: Build 
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
 
-    # Configuración para Node.js 14
-    steps:
-      # Configura el repositorio
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # Configura Node.js 14
-      - name: Set up Node.js 14
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14
-
-      # Instala las dependencias
-      - name: Install dependencies
-        run: npm install
-
-      # Ejecuta el script de construcción
-      - name: Build project
-        run: npm run build
-
-      # Opcional: Ejecuta pruebas
-      - name: Run tests
-        run: npm test
