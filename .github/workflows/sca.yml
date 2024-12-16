@@ -36,7 +36,7 @@ jobs:
       - name: Install SonarCloud Scanner
         run: npm install -g sonarqube-scanner
 
-      # Ejecutar análisis con SonarCloud y generar SARIF
+      # Ejecutar análisis con SonarCloud
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -46,14 +46,7 @@ jobs:
             -Dsonar.organization=hilary-madelein \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.analysis.sarifFile=sonarcloud-report.sarif
-
-      # Subir resultados de SonarCloud a GitHub como SARIF
-      - name: Upload SonarCloud SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sonarcloud-report.sarif
+            -Dsonar.login=$SONAR_TOKEN
 
       ## --- SNYK ---
       # Instalar Snyk CLI
