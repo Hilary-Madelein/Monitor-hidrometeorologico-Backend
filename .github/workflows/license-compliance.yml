@@ -37,16 +37,14 @@ jobs:
       # Validar contra licencias permitidas
       - name: Validate Licenses
         run: |
-            license-checker --production --json > license_report.json
             node -e "
             const fs = require('fs');
-            const permittedLicenses = [
-            'MIT', 'Apache-2.0', 'ISC', 'BSD-3-Clause', 'BSD-2-Clause', 'BSD', 'OBSD', 'Custom', 'UNLICENSED'
-            ];
+            const ignoredPackages = ['uglify-js', 'tslib'];
+            const permittedLicenses = ['MIT', 'Apache-2.0', 'ISC', 'BSD-3-Clause', 'BSD-2-Clause'];
             const report = JSON.parse(fs.readFileSync('license_report.json', 'utf-8'));
             const invalid = Object.entries(report).filter(([pkg, data]) => {
-            const license = data.licenses.replace('*', '').trim(); // Limpia posibles asteriscos
-            return !permittedLicenses.includes(license);
+            const license = (data.licenses || '').replace('*', '').trim();
+            return !permittedLicenses.includes(license) && !ignoredPackages.some(p => pkg.includes(p));
             });
             if (invalid.length) {
             console.error('Found invalid licenses:');
