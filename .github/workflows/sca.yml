@@ -51,7 +51,7 @@ jobs:
 
       # Subir resultados de SonarCloud a GitHub como SARIF
       - name: Upload SonarCloud SARIF
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sonarcloud-report.sarif
 
