@@ -31,35 +31,45 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Instalar y ejecutar SCA con Snyk
+      ## --- SONARCLOUD ---
+      # Instalar SonarCloud Scanner
+      - name: Install SonarCloud Scanner
+        run: npm install -g sonarqube-scanner
+
+      # Ejecutar análisis con SonarCloud y generar SARIF
+      - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=Hilary-Madelein \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=$SONAR_TOKEN \
+            -Dsonar.analysis.sarifFile=sonarcloud-report.sarif
+
+      # Subir resultados de SonarCloud a GitHub como SARIF
+      - name: Upload SonarCloud SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: sonarcloud-report.sarif
+
+      ## --- SNYK ---
+      # Instalar Snyk CLI
       - name: Install Snyk CLI
         run: npm install -g snyk
 
+      # Autenticación Snyk
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
+      # Ejecutar análisis SCA con Snyk y generar SARIF
       - name: Run SCA Analysis (Snyk)
-        id: snyk-scan
-        run: |
-          snyk test --json > snyk-report.json || true
-          echo "Snyk scan completed"
-
-      # Imprimir reporte JSON
-      - name: Print JSON Report
-        run: cat snyk-report.json
-
-      # Subir reporte como artefacto
-      - name: Upload SCA Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: SCA-Report
-          path: snyk-report.json
-
-      # Opcional: Generar reporte SARIF para análisis en GitHub Security
-      - name: Run SCA SARIF Report
         run: snyk test --sarif > snyk-report.sarif || true
 
-      - name: Upload SARIF Report
+      # Subir resultados de Snyk a GitHub como SARIF
+      - name: Upload Snyk SARIF
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: snyk-report.sarif
