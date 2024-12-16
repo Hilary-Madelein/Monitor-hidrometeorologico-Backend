@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   workflow_call:
 
+# Otorgar permisos para Code Scanning
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   sca:
     strategy:
