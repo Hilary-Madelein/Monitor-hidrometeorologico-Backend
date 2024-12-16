@@ -1,0 +1,65 @@
+name: 03 SCA
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  sca:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-20.04"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    name: SCA Node.js Project
+    steps:
+      # Clonar el repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Configurar Node.js 14
+      - name: Set up Node.js 14
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14
+          cache: 'npm'
+
+      # Instalar dependencias
+      - name: Install dependencies
+        run: npm install
+
+      # Instalar y ejecutar SCA con Snyk
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run SCA Analysis (Snyk)
+        id: snyk-scan
+        run: |
+          snyk test --json > snyk-report.json || true
+          echo "Snyk scan completed"
+
+      # Imprimir reporte JSON
+      - name: Print JSON Report
+        run: cat snyk-report.json
+
+      # Subir reporte como artefacto
+      - name: Upload SCA Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: SCA-Report
+          path: snyk-report.json
+
+      # Opcional: Generar reporte SARIF para análisis en GitHub Security
+      - name: Run SCA SARIF Report
+        run: snyk test --sarif > snyk-report.sarif || true
+
+      - name: Upload SARIF Report
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk-report.sarif

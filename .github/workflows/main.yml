@@ -22,3 +22,10 @@ jobs:
     uses: ./.github/workflows/build.yml
     secrets: inherit
 
+  #Análisis de dependencias
+  sca:
+    needs: build
+    name: SCA
+    uses: ./.github/workflows/sca.yml
+    secrets: inherit
+
