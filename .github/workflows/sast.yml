@@ -1,0 +1,69 @@
+name: 04 SAST
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  SAST-CodeQL:
+    name: Build and SAST CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ "javascript" ]
+
+    steps:
+      # Clonar el repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Inicializar CodeQL para JavaScript
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+
+      # Instalar dependencias
+      - name: Install Dependencies
+        run: npm install
+
+      # Realizar el análisis de CodeQL
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  sast-eslint:
+    name: SAST ESLint
+    needs: [SAST-CodeQL]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      # Clonar el repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Instalar ESLint
+      - name: Install ESLint
+        run: npm install eslint --save-dev
+
+      # Configurar y ejecutar análisis con ESLint
+      - name: Run ESLint
+        run: |
+          npx eslint . --format json -o eslint-results.json || true
+
+      # Subir resultados de ESLint como SARIF
+      - name: Upload ESLint SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: eslint-results.json
