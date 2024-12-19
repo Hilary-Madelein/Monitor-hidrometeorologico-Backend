@@ -13,11 +13,6 @@ jobs:
       contents: read
       security-events: write
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ "javascript" ]
-
     steps:
       # Clonar el repositorio
       - name: Checkout repository
@@ -27,7 +22,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
-          languages: ${{ matrix.language }}
+          languages: "javascript"
 
       # Instalar dependencias
       - name: Install Dependencies
@@ -37,7 +32,7 @@ jobs:
       - name: CodeQL Analysis
         uses: github/codeql-action/analyze@v2
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:javascript"
 
   sast-eslint:
     name: SAST ESLint
@@ -57,10 +52,18 @@ jobs:
       - name: Install ESLint
         run: npm install eslint --save-dev
 
-      # Configurar y ejecutar análisis con ESLint
+      # Ejecutar ESLint y generar archivo JSON
       - name: Run ESLint
         run: |
           npx eslint . --format json -o eslint-results.json || true
+
+      # Verificar que el archivo de resultados exista
+      - name: Check ESLint Results
+        run: |
+          if [ ! -f eslint-results.json ]; then
+            echo "No ESLint results found!";
+            exit 1;
+          fi
 
       # Subir resultados de ESLint como SARIF
       - name: Upload ESLint SARIF
