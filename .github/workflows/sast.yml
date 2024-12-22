@@ -52,16 +52,17 @@ jobs:
       - name: Install ESLint
         run: npm install eslint --save-dev
 
-      # Ejecutar ESLint y generar archivo JSON
-      - name: Run ESLint
+      # Ejecutar ESLint y generar archivo JSON y SARIF
+      - name: Run ESLint and Generate SARIF
         run: |
           npx eslint . --format json -o eslint-results.json || true
+          npx sarif json-to-sarif eslint-results.json > eslint-results.sarif
 
-      # Verificar que el archivo de resultados exista
-      - name: Check ESLint Results
+      # Verificar que el archivo de resultados SARIF exista
+      - name: Check ESLint SARIF Results
         run: |
-          if [ ! -f eslint-results.json ]; then
-            echo "No ESLint results found!";
+          if [ ! -f eslint-results.sarif ]; then
+            echo "No ESLint SARIF results found!";
             exit 1;
           fi
 
@@ -69,4 +70,4 @@ jobs:
       - name: Upload ESLint SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: eslint-results.json
+          sarif_file: eslint-results.sarif
