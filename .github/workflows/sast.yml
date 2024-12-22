@@ -56,15 +56,6 @@ jobs:
       - name: Run ESLint and Generate SARIF
         run: |
           npx eslint . --format json -o eslint-results.json || true
-          npx sarif json-to-sarif eslint-results.json > eslint-results.sarif
-
-      # Verificar que el archivo de resultados SARIF exista
-      - name: Check ESLint SARIF Results
-        run: |
-          if [ ! -f eslint-results.sarif ]; then
-            echo "No ESLint SARIF results found!";
-            exit 1;
-          fi
 
       # Subir resultados de ESLint como SARIF
       - name: Upload ESLint SARIF
