@@ -51,7 +51,14 @@ jobs:
             -Dsonar.organization=hilary-madelein \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=$SONAR_TOKEN
+            -Dsonar.login=$SONAR_TOKEN \
+            -Dsonar.analysis.sarifFile=sonarcloud-results.sarif
+
+      # Subir resultados de SonarCloud como SARIF a GitHub
+      - name: Upload SonarCloud SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sonarcloud-results.sarif
 
       ## --- SNYK ---
       # Instalar Snyk CLI
