@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   workflow_call:
 
-# Otorgar permisos para Code Scanning
 permissions:
   security-events: write
   contents: read
@@ -51,14 +50,14 @@ jobs:
             -Dsonar.organization=hilary-madelein \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.analysis.sarifFile=sonarcloud-results.sarif
+            -Dsonar.login=$SONAR_TOKEN
 
-      # Subir resultados de SonarCloud como SARIF a GitHub
-      - name: Upload SonarCloud SARIF
-        uses: github/codeql-action/upload-sarif@v3
+      # Subir artefactos del análisis de SonarCloud
+      - name: Upload SonarCloud Artifact
+        uses: actions/upload-artifact@v3
         with:
-          sarif_file: sonarcloud-results.sarif
+          name: sonarcloud-report
+          path: .scannerwork
 
       ## --- SNYK ---
       # Instalar Snyk CLI
