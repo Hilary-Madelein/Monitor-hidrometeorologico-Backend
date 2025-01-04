@@ -32,7 +32,7 @@ router.get('/privado/:external', async function(req, res, next) {
       console.log(`Conectado a la base de datos Cosmos: ${databaseId}`);
       
       // Conexión a MySQL
-      var models = require('./../models');  // Cargar el modelo para MySQL
+      const models = require('./../models');  // Cargar el modelo para MySQL
       await models.sequelize.sync();  // Conectar y sincronizar MySQL
       console.log('Se ha conectado a MySQL');
 

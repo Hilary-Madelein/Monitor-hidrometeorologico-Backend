@@ -1,17 +1,15 @@
 'use strict';
-const { body, validationResult, check } = require('express-validator');
+const { validationResult } = require('express-validator');
 const models = require('../models');
 const path = require('path');
 const uuid = require('uuid');
 const fs = require('fs');
-const estacion = require('../models/estacion');
-const microcuenca = require('../models/microcuenca');
 
 class EstacionController {
 
     async listar(req, res) {
         try {
-            var listar = await models.estacion.findAll({
+            let listar = await models.estacion.findAll({
                 attributes: ['nombre', 'external_id', 'foto', 'longitud', 'latitud', 'altitud', 'estado', 'tipo', 'id_dispositivo'],
             });
             res.json({ msg: 'OK!', code: 200, info: listar });
@@ -23,7 +21,7 @@ class EstacionController {
 
     async listarOperativas(req, res) {
         try {
-            var listar = await models.estacion.findAll({
+            let listar = await models.estacion.findAll({
                 attributes: ['nombre', 'external_id', 'foto', 'longitud', 'latitud', 'altitud', 'estado', 'tipo', 'id_dispositivo', 'descripcion'],
                 where: { estado: 'OPERATIVA' }
             });
@@ -47,7 +45,7 @@ class EstacionController {
             });
         }
 
-        var lista = await models.estacion.findAll({
+        let lista = await models.estacion.findAll({
             where: {
                 id_microcuenca: microcuencaAux.id,
             },
@@ -72,7 +70,7 @@ class EstacionController {
         const external = req.body.external;
         let microcuencaAux = await models.microcuenca.findOne({ where: { external_id: external } });
 
-        var lista = await models.estacion.findAll({
+        let lista = await models.estacion.findAll({
             where: {
                 id_microcuenca: microcuencaAux.id,
                 estado: "OPERATIVA"
@@ -133,7 +131,7 @@ class EstacionController {
                 id_microcuenca: microcuencaAux.id,
             };
 
-            const estacion = await models.estacion.create(data, { transaction });
+            await models.estacion.create(data, { transaction });
             await transaction.commit();
 
             return res.status(200).json({
@@ -149,8 +147,6 @@ class EstacionController {
             if (transaction && !transaction.finished) {
                 await transaction.rollback();
             }
-
-            console.log("ddddd", error);
 
             return res.status(400).json({
                 msg: error.message || "Ha ocurrido un error en el servidor",

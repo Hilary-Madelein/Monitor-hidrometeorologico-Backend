@@ -1,7 +1,7 @@
 'use strict';
-const { body, validationResult, check } = require('express-validator');
+const {validationResult} = require('express-validator');
 const models = require('../models');
-var entidad = models.entidad;
+const entidad = models.entidad;
 const bcrypt = require('bcrypt');
 const path = require('path');
 const uuid = require('uuid');
@@ -11,7 +11,7 @@ class EntidadController {
 
     async listar(req, res) {
         try {
-            var listar = await entidad.findAll({
+            let listar = await entidad.findAll({
                 attributes: ['apellidos', 'nombres', 'external_id', 'foto', 'telefono', 'estado'],
                 include: [
                     {
@@ -31,7 +31,7 @@ class EntidadController {
 
     async obtener(req, res) {
         const external = req.params.external;
-        var lista = await entidad.findOne({
+        let lista = await entidad.findOne({
             where: {
                 external_id: external
             },
@@ -104,7 +104,7 @@ class EntidadController {
                 external_id: uuid.v4()
             };
     
-            const entidad = await models.entidad.create(data, {
+            await models.entidad.create(data, {
                 include: [{ model: models.cuenta, as: "cuenta" }],
                 transaction
             });
@@ -117,7 +117,7 @@ class EntidadController {
             });
     
         } catch (error) {
-            if (req.file && req.file.path) {
+            if (req.file?.path) {
                 fs.unlinkSync(path.join(__dirname, '../public/images/users', req.file.filename));
             }
     

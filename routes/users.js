@@ -6,33 +6,32 @@ const path = require('path');
 const uuid = require('uuid');
 const { body, validationResult,isDate } = require('express-validator');
 const MedidaController = require('../controls/MedidaController');
-var medidaController = new MedidaController();
+let medidaController = new MedidaController();
 const EntidadController = require('../controls/EntidadController');
-var entidadController = new EntidadController();
+let entidadController = new EntidadController();
 const CuentaController = require('../controls/CuentaController');
-var cuentaController = new CuentaController();
+let cuentaController = new CuentaController();
 const MicrocuencaController = require('../controls/MicrocuencaController');
-var microcuencaController = new MicrocuencaController();
+let microcuencaController = new MicrocuencaController();
 const EstacionController = require('../controls/EstacionController');
-var estacionController = new EstacionController();
+let estacionController = new EstacionController();
 const TipoMedidaController = require('../controls/TipoMedidaController');
-var tipoMedidaController = new TipoMedidaController();
+let tipoMedidaController = new TipoMedidaController();
 const MedicionController = require('../controls/MedicionController');
-var medicionController = new MedicionController();
+let medicionController = new MedicionController();
 const MedidaEstacionController = require('../controls/MedidaEstacionController');
-var medidaEstacionController = new MedidaEstacionController();
+let medidaEstacionController = new MedidaEstacionController();
 
 /* GET users listing. */
 router.get('/', function (req, res, next) {
   res.json({ "version": "1.0", "name": "hidrometeorologica-backend" });
 });
 
-var auth = function middleware(req, res, next) {
+let auth = function middleware(req, res, next) {
   const token = req.headers['x-api-token'];
   if (token) {
     require('dotenv').config();
     const llave = process.env.KEY;
-    console.log(llave)
     jwt.verify(token, llave, async (err, decoded) => {
       if (err) {
         res.status(401);
@@ -41,8 +40,8 @@ var auth = function middleware(req, res, next) {
           code: 401
         });
       } else {
-        var models = require('../models');
-        var cuenta = models.cuenta;
+        const models = require('../models');
+        const cuenta = models.cuenta;
         req.decoded = decoded;
         let aux = await cuenta.findOne({ 
           where: { 
@@ -78,7 +77,6 @@ const createStorage = (folderPath) => {
   return multer.diskStorage({
     destination: path.join(__dirname, folderPath),
     filename: (req, file, cb) => {
-      console.log(file);
       const parts = file.originalname.split('.');
       const extension = parts[parts.length - 1];
       cb(null, uuid.v4() + "." + extension);

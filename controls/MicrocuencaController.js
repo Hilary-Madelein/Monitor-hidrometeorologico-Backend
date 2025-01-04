@@ -11,7 +11,7 @@ class MicrocuencaController {
 
     async listarOperativas(req, res) {
         try {
-            var listar = await models.microcuenca.findAll({
+            let listar = await models.microcuenca.findAll({
                 where:{estado: true},
                 attributes: ['external_id', 'estado', 'foto', 'nombre', 'descripcion'],
             });
@@ -24,7 +24,7 @@ class MicrocuencaController {
     
     async listar(req, res) {
         try {
-            var listar = await models.microcuenca.findAll({
+            let listar = await models.microcuenca.findAll({
                 attributes: ['external_id', 'estado', 'foto', 'nombre', 'descripcion'],
             });
             res.json({ msg: 'OK!', code: 200, info: listar });
@@ -37,7 +37,7 @@ class MicrocuencaController {
 
     async obtener(req, res) {
         const external = req.params.external;
-        var lista = await models.microcuenca.findOne({
+        let lista = await models.microcuenca.findOne({
             where: {
                 external_id: external
             },
@@ -161,7 +161,6 @@ class MicrocuencaController {
     
     async guardar(req, res) {
         const transaction = await models.sequelize.transaction();
-        const saltRounds = 10;
     
         try {
             const errors = validationResult(req);
@@ -182,7 +181,7 @@ class MicrocuencaController {
                 external_id: uuid.v4()
             };
     
-            const microcuenca = await models.microcuenca.create(data, {transaction});
+            await models.microcuenca.create(data, {transaction});
     
             await transaction.commit();
     
@@ -192,7 +191,7 @@ class MicrocuencaController {
             });
     
         } catch (error) {
-            if (req.file && req.file.path) {
+            if (req.file?.path) {
                 fs.unlinkSync(path.join(__dirname, '../public/images/users', req.file.filename));
             }
     

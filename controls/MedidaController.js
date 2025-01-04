@@ -1,6 +1,52 @@
 const { client, databaseId, getAllContainers } = require('../routes/index');
 require('dotenv').config();
 
+const validarParametros = ({ escalaDeTiempo, mes, anio, fechaInicio, fechaFin }) => {
+    if (!escalaDeTiempo && (!mes || !anio) && (!fechaInicio || !fechaFin)) {
+        throw new Error('Debe proporcionar una escala de tiempo válida, un mes/año o un rango de fechas.');
+    }
+};
+
+const calcularFechas = (escalaDeTiempo, mes, anio, fechaInicio, fechaFin, ultimaFecha) => {
+    let fechaInicioISO, fechaFinISO;
+
+    if (escalaDeTiempo) {
+        switch (escalaDeTiempo) {
+            case '15min': fechaInicioISO = new Date(ultimaFecha.getTime() - 15 * 60000).toISOString(); break;
+            case '30min': fechaInicioISO = new Date(ultimaFecha.getTime() - 30 * 60000).toISOString(); break;
+            case 'hora': fechaInicioISO = new Date(ultimaFecha.getTime() - 60 * 60000).toISOString(); break;
+            case 'diaria': fechaInicioISO = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth(), ultimaFecha.getDate()).toISOString(); break;
+            default: throw new Error('Escala de tiempo inválida.');
+        }
+        fechaFinISO = ultimaFecha.toISOString();
+    } else if (mes && anio) {
+        fechaInicioISO = new Date(anio, mes - 1, 1).toISOString();
+        fechaFinISO = new Date(anio, mes, 0).toISOString();
+    } else if (fechaInicio && fechaFin) {
+        fechaInicioISO = new Date(fechaInicio).toISOString();
+        fechaFinISO = new Date(fechaFin).toISOString();
+        if (isNaN(Date.parse(fechaInicioISO)) || isNaN(Date.parse(fechaFinISO))) {
+            throw new Error('Fechas inválidas.');
+        }
+    }
+
+    return { fechaInicioISO, fechaFinISO };
+};
+
+const filtrarDatosValidos = (items, limitesEspecificos, umbralGeneral) => {
+    const esValorValido = (campo, valor) => {
+        if (limitesEspecificos[campo]) {
+            const { min, max } = limitesEspecificos[campo];
+            return valor !== null && !isNaN(valor) && valor >= min && valor <= max;
+        }
+        return valor !== null && !isNaN(valor) && Math.abs(valor) < umbralGeneral;
+    };
+
+    return items.filter(item => 
+        Object.keys(item).every(campo => esValorValido(campo, item[campo]))
+    );
+};
+
 class MedidaController {
     async getUltimasTenMedidas(req, res) {
         try {
@@ -367,155 +413,107 @@ class MedidaController {
         }
     }*/
 
-    async getDatosClimaticosPorEscala(req, res) {
-        try {
-            const { escalaDeTiempo, mes, anio, fechaInicio, fechaFin } = req.body;
-    
-            if (!escalaDeTiempo && (!mes || !anio) && (!fechaInicio || !fechaFin)) {
-                return res.status(400).json({
-                    msg: 'Debe proporcionar una escala de tiempo válida, un mes/año o un rango de fechas.',
-                    code: 400
+        
+        //REVISAR LUEGO
+        async getDatosClimaticosPorEscala(req, res) {
+            try {
+                const { escalaDeTiempo, mes, anio, fechaInicio, fechaFin } = req.body;
+        
+                // Validar parámetros
+                validarParametros({ escalaDeTiempo, mes, anio, fechaInicio, fechaFin });
+        
+                const containers = await getAllContainers();
+                if (!containers || containers.length === 0) {
+                    return res.status(404).json({ msg: 'No se encontraron estaciones registradas', code: 404 });
+                }
+        
+                const containerId = containers[0];
+                const database = client.database(databaseId);
+                const container = database.container(containerId);
+        
+                const ultimoRegistroQuery = {
+                    query: `SELECT TOP 1 c["Fecha_local_UTC-5"] FROM c ORDER BY c["Fecha_local_UTC-5"] DESC`
+                };
+                const { resources: ultimoRegistro } = await container.items.query(ultimoRegistroQuery).fetchAll();
+                if (ultimoRegistro.length === 0) {
+                    return res.status(404).json({ msg: 'No se encontró ningún registro en la base de datos', code: 404 });
+                }
+        
+                const ultimaFecha = new Date(ultimoRegistro[0]["Fecha_local_UTC-5"]);
+                const { fechaInicioISO, fechaFinISO } = calcularFechas(escalaDeTiempo, mes, anio, fechaInicio, fechaFin, ultimaFecha);
+        
+                const query = {
+                    query: `SELECT 
+                                c.Temperatura,
+                                c.Humedad,
+                                c.Presion,
+                                c.Lluvia,
+                                c.Nivel_de_agua,
+                                c.Carga_H,
+                                c.Distancia_Hs
+                            FROM c
+                            WHERE c["Fecha_local_UTC-5"] >= @inicio
+                              AND c["Fecha_local_UTC-5"] <= @fin`,
+                    parameters: [
+                        { name: "@inicio", value: fechaInicioISO },
+                        { name: "@fin", value: fechaFinISO }
+                    ]
+                };
+        
+                const { resources: items } = await container.items.query(query).fetchAll();
+                if (items.length === 0) {
+                    return res.status(404).json({ msg: 'No se encontraron datos.', code: 404 });
+                }
+        
+                const umbralGeneral = 1e6;
+                const limitesEspecificos = { Humedad: { min: 0, max: 100 } };
+                const datosValidos = filtrarDatosValidos(items, limitesEspecificos, umbralGeneral);
+        
+                if (datosValidos.length === 0) {
+                    return res.status(404).json({ msg: 'No se encontraron datos válidos.', code: 404 });
+                }
+        
+                const medidasConfig = {
+                    Temperatura: ["AVG", "MAX", "MIN"],
+                    Humedad: ["AVG"],
+                    Presion: ["AVG"],
+                    Lluvia: ["SUM"],
+                    Nivel_de_agua: ["AVG", "MAX"],
+                    Carga_H: ["AVG"],
+                    Distancia_Hs: ["MIN", "MAX"]
+                };
+        
+                const resultados = {};
+                Object.keys(medidasConfig).forEach(campo => {
+                    const valores = datosValidos.map(d => d[campo]).filter(v => v !== null && v !== undefined);
+                    if (valores.length > 0) {
+                        medidasConfig[campo].forEach(operacion => {
+                            switch (operacion) {
+                                case 'AVG':
+                                    resultados[`avg_${campo}`] = valores.reduce((a, b) => a + b, 0) / valores.length;
+                                    break;
+                                case 'MAX':
+                                    resultados[`max_${campo}`] = Math.max(...valores);
+                                    break;
+                                case 'MIN':
+                                    resultados[`min_${campo}`] = Math.min(...valores);
+                                    break;
+                                case 'SUM':
+                                    resultados[`sum_${campo}`] = valores.reduce((a, b) => a + b, 0);
+                                    break;
+                            }
+                        });
+                    }
                 });
+        
+                res.status(200).json({ msg: 'OK!', code: 200, container: containerId, info: resultados });
+        
+            } catch (error) {
+                console.error('Error en getDatosClimaticosPorEscala:', error);
+                res.status(500).json({ msg: 'Error al obtener datos climáticos', code: 500, info: error.message });
             }
-    
-            const containers = await getAllContainers();
-            if (!containers || containers.length === 0) {
-                return res.status(404).json({
-                    msg: 'No se encontraron estaciones registradas',
-                    code: 404
-                });
-            }
-    
-            const containerId = containers[0];
-            const database = client.database(databaseId);
-            const container = database.container(containerId);
-    
-            let fechaInicioISO, fechaFinISO;
-            
-            const ultimoRegistroQuery = {
-                query: `SELECT TOP 1 c["Fecha_local_UTC-5"] FROM c ORDER BY c["Fecha_local_UTC-5"] DESC`
-            };
-            const { resources: ultimoRegistro } = await container.items.query(ultimoRegistroQuery).fetchAll();
-            if (ultimoRegistro.length === 0) {
-                return res.status(404).json({
-                    msg: 'No se encontró ningún registro en la base de datos',
-                    code: 404
-                });
-            }
-            
-            const ultimaFecha = new Date(ultimoRegistro[0]["Fecha_local_UTC-5"]);
-            
-            if (escalaDeTiempo) {
-                switch (escalaDeTiempo) {
-                    case '15min': fechaInicioISO = new Date(ultimaFecha.getTime() - 15 * 60000).toISOString(); break;
-                    case '30min': fechaInicioISO = new Date(ultimaFecha.getTime() - 30 * 60000).toISOString(); break;
-                    case 'hora': fechaInicioISO = new Date(ultimaFecha.getTime() - 60 * 60000).toISOString(); break;
-                    case 'diaria': fechaInicioISO = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth(), ultimaFecha.getDate()).toISOString(); break;
-                    default: return res.status(400).json({ msg: 'Escala de tiempo inválida.', code: 400 });
-                }
-                fechaFinISO = ultimaFecha.toISOString();
-            } else if (mes && anio) {
-                fechaInicioISO = new Date(anio, mes - 1, 1).toISOString();
-                fechaFinISO = new Date(anio, mes, 0).toISOString();
-            } else if (fechaInicio && fechaFin) {
-                fechaInicioISO = new Date(fechaInicio).toISOString();
-                fechaFinISO = new Date(fechaFin).toISOString();
-                if (isNaN(Date.parse(fechaInicioISO)) || isNaN(Date.parse(fechaFinISO))) {
-                    return res.status(400).json({ msg: 'Fechas inválidas.', code: 400 });
-                }
-            }
-    
-            const medidasConfig = {
-                Temperatura: ["AVG", "MAX", "MIN"],
-                Humedad: ["AVG"],
-                Presion: ["AVG"],
-                Lluvia: ["SUM"],
-                Nivel_de_agua: ["AVG", "MAX"],
-                Carga_H: ["AVG"],
-                Distancia_Hs: ["MIN", "MAX"]
-            };
-    
-            const query = {
-                query: `SELECT 
-                            c.Temperatura,
-                            c.Humedad,
-                            c.Presion,
-                            c.Lluvia,
-                            c.Nivel_de_agua,
-                            c.Carga_H,
-                            c.Distancia_Hs
-                        FROM c
-                        WHERE c["Fecha_local_UTC-5"] >= @inicio
-                          AND c["Fecha_local_UTC-5"] <= @fin`,
-                parameters: [
-                    { name: "@inicio", value: fechaInicioISO },
-                    { name: "@fin", value: fechaFinISO }
-                ]
-            };
-    
-            const { resources: items } = await container.items.query(query).fetchAll();
-            if (items.length === 0) {
-                return res.status(404).json({ msg: 'No se encontraron datos.', code: 404 });
-            }
-    
-            const umbralGeneral = 1e6;
-            const limitesEspecificos = { Humedad: { min: 0, max: 100 } };
-    
-            const esValorValido = (campo, valor) => {
-                if (limitesEspecificos[campo]) {
-                    const { min, max } = limitesEspecificos[campo];
-                    return valor !== null && !isNaN(valor) && valor >= min && valor <= max;
-                }
-                return valor !== null && !isNaN(valor) && Math.abs(valor) < umbralGeneral;
-            };
-    
-            const datosValidos = items.filter(item => {
-                return Object.keys(item).every(campo => esValorValido(campo, item[campo]));
-            });
-    
-            if (datosValidos.length === 0) {
-                return res.status(404).json({ msg: 'No se encontraron datos válidos.', code: 404 });
-            }
-    
-            const resultados = {};
-            Object.keys(medidasConfig).forEach(campo => {
-                const valores = datosValidos.map(d => d[campo]).filter(v => v !== null && v !== undefined);
-                if (valores.length > 0) {
-                    medidasConfig[campo].forEach(operacion => {
-                        switch (operacion) {
-                            case 'AVG':
-                                resultados[`avg_${campo}`] = valores.reduce((a, b) => a + b, 0) / valores.length;
-                                break;
-                            case 'MAX':
-                                resultados[`max_${campo}`] = Math.max(...valores);
-                                break;
-                            case 'MIN':
-                                resultados[`min_${campo}`] = Math.min(...valores);
-                                break;
-                            case 'SUM':
-                                resultados[`sum_${campo}`] = valores.reduce((a, b) => a + b, 0);
-                                break;
-                        }
-                    });
-                }
-            });
-    
-            res.status(200).json({
-                msg: 'OK!',
-                code: 200,
-                container: containerId,
-                info: resultados
-            });
-    
-        } catch (error) {
-            console.error('Error en getDatosClimaticosPorEscala:', error);
-            return res.status(500).json({
-                msg: 'Error al obtener datos climáticos',
-                code: 500,
-                info: error.message
-            });
         }
-    }  
+         
      
     
     async getAllDatosClimaticosPorEscala(req, res) {

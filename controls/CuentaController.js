@@ -1,5 +1,5 @@
-var models = require('../models')
-var cuenta = models.cuenta;
+const models = require('../models')
+const cuenta = models.cuenta;
 
 const { validationResult } = require('express-validator');
 
@@ -21,7 +21,7 @@ class CuentaController {
                     errors: errors.array()
                 });
             }
-            var login = await cuenta.findOne({
+            let login = await cuenta.findOne({
                 where: {
                     correo: req.body.correo
                 },
@@ -37,7 +37,7 @@ class CuentaController {
                     code: 400
                 })
 
-            var esClaveValida = function (clave, claveUser) {
+            let esClaveValida = function (clave, claveUser) {
                 return bcrypt.compareSync(claveUser, clave);
             }
             
@@ -84,7 +84,7 @@ class CuentaController {
 
         } catch (error) {
             console.log(error);
-            if (error.errors && error.errors[0].message) {
+            if (error.errors?.[0]?.message) {
                 return res.status(400).json({
                     msg: error.errors[0].message,
                     code: 400
@@ -121,9 +121,9 @@ class CuentaController {
                     }
                 ]
             };
-            var cuentasEncontradas = await models.entidad.findAll({ 
+            let cuentasEncontradas = await models.entidad.findAll({ 
                 where: condicionesBusqueda,
-                limit: 10 // Limitar los resultados a 10
+                limit: 10 
             });
             
             if (cuentasEncontradas.length === 0) {

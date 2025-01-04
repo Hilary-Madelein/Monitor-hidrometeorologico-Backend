@@ -1,5 +1,5 @@
 const MigracionController = require('../controls/MigracionController');
-var migracionController = new MigracionController();
+let migracionController = new MigracionController();
 
 // Ejecución inicial de migración al iniciar el servidor
 (async () => {
