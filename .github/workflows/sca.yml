@@ -50,6 +50,7 @@ jobs:
             -Dsonar.organization=hilary-madelein \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverage.exclusions=**/* \
             -Dsonar.login=$SONAR_TOKEN
 
       # Subir artefactos del análisis de SonarCloud
