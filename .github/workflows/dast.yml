@@ -7,9 +7,6 @@ on:
         type: string
         description: 'The target URL for DAST scan'
         required: true
-    secrets:
-      GITHUB_TOKEN:
-        required: true
 
 jobs:
   zap_scan:
