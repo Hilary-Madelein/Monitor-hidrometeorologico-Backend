@@ -8,15 +8,8 @@ on:
         description: 'The name of the docker image to scan'
         required: true
 
-  workflow_call:
-    inputs:
-      image-tag:
-        type: string
-        description: 'The name of the docker image to scan'
-        required: false
-
 env:
-  IMAGE_TAG: ${{ inputs.image-tag || github.event.inputs['image-tag'] }}
+  IMAGE_TAG: ${{ github.event.inputs['image-tag'] }}
 
 jobs:
   dast-scan:
@@ -33,21 +26,21 @@ jobs:
       - name: Start demo app container
         run: |
           docker rm -f demoApp || true
-          docker run -d -p 8080:8080 --name demoApp ${{ env.IMAGE_TAG }}
+          docker run -d -p 3006:3006 --name demoApp ${{ env.IMAGE_TAG }}
 
       - name: Wait for container to start
         run: |
-          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8080)" != "200" ]]; do sleep 5; done' || false
+          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3006)" != "200" ]]; do sleep 5; done' || false
 
       - name: Test container
-        run: curl -s localhost:8080/echo?msg=Hello%20World!
+        run: curl -s localhost:3006/echo?msg=Hello%20World!
 
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
           docker_name: 'owasp/zap2docker-stable'
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'http://localhost:8080'
+          target: 'http://localhost:3006'
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
