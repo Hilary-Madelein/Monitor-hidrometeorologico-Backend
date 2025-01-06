@@ -26,6 +26,10 @@ app.use(cors({ origin: '*' }));
 app.use('/', indexRouter);  // Usar el enrutador aquí
 app.use('/api', usersRouter);
 
+app.get('/', (req, res) => {
+  res.status(200).send('Hello, World!');
+});
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
@@ -54,10 +58,6 @@ app.use(function(err, req, res, next) {
     message: err.message,
     error: err
   });
-});
-
-app.get('/', (req, res) => {
-  res.status(200).send('Hello, World!');
 });
 
 
