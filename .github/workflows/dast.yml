@@ -16,7 +16,7 @@ on:
         required: false
 
 env:
-  IMAGE_TAG: ${{ github.event.inputs['image-tag'] }}  # Usa el input proporcionado
+  IMAGE_TAG: ${{ inputs.image-tag || github.event.inputs['image-tag'] }}
 
 jobs:
   dast-scan:
