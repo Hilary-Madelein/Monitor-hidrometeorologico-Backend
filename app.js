@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors({ origin: '*' }));
 
 
-app.use('/', indexRouter);  // Usar el enrutador aquí
+app.use('/', indexRouter);  
 app.use('/api', usersRouter);
 
 app.get('/', (req, res) => {
