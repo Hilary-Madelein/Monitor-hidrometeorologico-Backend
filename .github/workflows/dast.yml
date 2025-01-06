@@ -31,16 +31,15 @@ jobs:
       - name: Check container status
         run: docker ps
 
-      - name: Test container endpoint
-        run: curl -i http://localhost:3006
+      - name: Inspect container logs
+        run: docker logs demoApp
 
       - name: Wait for container to start
         run: |
           timeout 600 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3006)" != "200" ]]; do sleep 5; done' || false
 
-      - name: Inspect container logs
-        if: failure()
-        run: docker logs demoApp
+      - name: Test container endpoint
+        run: curl -i http://localhost:3006
 
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
