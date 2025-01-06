@@ -43,3 +43,12 @@ jobs:
     uses: ./.github/workflows/sast.yml
     secrets: inherit
 
+  #Análisis de código Dinámico
+  dast:
+    needs: build
+    name: DAST
+    uses: ./.github/workflows/dast.yml
+    with:
+      target: 'https://www.zaproxy.org/'
+    secrets: inherit
+
