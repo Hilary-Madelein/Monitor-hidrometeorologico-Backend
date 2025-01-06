@@ -49,7 +49,7 @@ jobs:
     name: DAST
     uses: ./.github/workflows/dast.yml
     with:
-      image-tag: 'observatorio_backend:latest'  # Especifica aquí tu imagen Docker
+      image-tag: 'observatorio_backend:latest'
     secrets: inherit
 
 
