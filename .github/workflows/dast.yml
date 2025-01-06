@@ -13,7 +13,8 @@ on:
       image-tag:
         type: string
         description: 'The name of the docker image to scan'
-        required: true
+        default: 'my-default-image:latest'  # Valor predeterminado
+        required: false
 
 env:
   IMAGE_TAG: ${{ github.event.inputs['image-tag'] }}
