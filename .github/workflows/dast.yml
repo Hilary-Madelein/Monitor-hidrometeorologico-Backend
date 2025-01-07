@@ -30,11 +30,6 @@ jobs:
           docker rm -f demoApp || true
           docker run -d -p 3006:3006 --name demoApp ${{ env.IMAGE_TAG }}
 
-      - name: Check container status
-        run: |
-          echo "Verificando el estado del contenedor..."
-          docker ps -a
-
       - name: Inspect container logs
         run: |
           echo "Inspeccionando los logs del contenedor..."
@@ -45,11 +40,13 @@ jobs:
           echo "Esperando que el contenedor esté disponible en localhost:3006..."
           for i in {1..30}; do
             STATUS=$(curl -s -o /dev/null -w '%{http_code}' localhost:3006 || echo "000")
-            echo "HTTP status: $STATUS"
+            echo "Intento $i: HTTP status: $STATUS"
             if [ "$STATUS" == "200" ]; then
               echo "El servicio está disponible."
               exit 0
             fi
+            echo "Logs del contenedor:"
+            docker logs demoApp
             echo "El servicio aún no está disponible, reintentando..."
             sleep 10
           done
