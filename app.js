@@ -10,13 +10,9 @@ var createError = require('http-errors');
 
 var app = express();
 
-const PORT = 3006;
-const HOST = '0.0.0.0';
-
-app.listen(PORT, HOST, () => {
-  console.log(`Server is running on http://${HOST}:${PORT}`);
+app.listen(3006, () => {
+  console.log("Servidor iniciado en el puerto 3006");
 });
-
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
