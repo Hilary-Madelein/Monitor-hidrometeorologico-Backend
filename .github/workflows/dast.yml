@@ -31,12 +31,16 @@ jobs:
       - name: Check container status
         run: docker ps
 
-      - name: Inspect container logs
+      - name: Inspect Container Logs
         run: docker logs demoApp
 
       - name: Wait for container to start
         run: |
-          timeout 600 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3006)" != "200" ]]; do sleep 5; done' || false
+          echo "Esperando que el contenedor esté disponible en localhost:3006..."
+          timeout 900 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3006)" != "200" ]]; do 
+            echo "El servicio aún no está disponible, reintentando..."; 
+            sleep 5; 
+          done' || (echo "Error: El contenedor no inició correctamente" && exit 1)
 
       - name: Test container endpoint
         run: curl -i http://localhost:3006
