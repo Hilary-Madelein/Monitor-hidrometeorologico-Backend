@@ -1,7 +1,7 @@
 name: 50 DAST Scan Docker Image
 
 on:
-  workflow_call: 
+  workflow_call:
     inputs:
       image-tag:
         type: string
@@ -21,36 +21,53 @@ jobs:
 
       - name: Build Docker image
         run: |
+          echo "Construyendo la imagen Docker..."
           docker build -t ${{ env.IMAGE_TAG }} .
 
       - name: Start demo app container
         run: |
+          echo "Iniciando el contenedor de la aplicación..."
           docker rm -f demoApp || true
           docker run -d -p 3006:3006 --name demoApp ${{ env.IMAGE_TAG }}
 
       - name: Check container status
-        run: docker ps
+        run: |
+          echo "Verificando el estado del contenedor..."
+          docker ps -a
 
-      - name: Inspect Container Logs
-        run: docker logs demoApp
+      - name: Inspect container logs
+        run: |
+          echo "Inspeccionando los logs del contenedor..."
+          docker logs demoApp
 
       - name: Wait for container to start
         run: |
           echo "Esperando que el contenedor esté disponible en localhost:3006..."
-          timeout 900 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3006)" != "200" ]]; do 
-            echo "El servicio aún no está disponible, reintentando..."; 
-            sleep 5; 
-          done' || (echo "Error: El contenedor no inició correctamente" && exit 1)
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' localhost:3006 || echo "000")
+            echo "HTTP status: $STATUS"
+            if [ "$STATUS" == "200" ]; then
+              echo "El servicio está disponible."
+              exit 0
+            fi
+            echo "El servicio aún no está disponible, reintentando..."
+            sleep 10
+          done
+          echo "Error: El servicio no inició correctamente."
+          docker logs demoApp
+          exit 1
 
       - name: Test container endpoint
-        run: curl -i http://localhost:3006
+        run: |
+          echo "Probando el endpoint de la aplicación..."
+          curl -i http://localhost:3006
 
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
           docker_name: 'owasp/zap2docker-stable'
-          token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3006'
+          token: ${{ secrets.GITHUB_TOKEN }}
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
@@ -63,6 +80,7 @@ jobs:
       - name: Stop and clean up Docker container
         if: always()
         run: |
+          echo "Deteniendo y eliminando el contenedor Docker..."
           docker stop demoApp && docker rm demoApp
           docker container prune --force
           docker image prune --force
