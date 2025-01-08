@@ -16,16 +16,12 @@ jobs:
     name: DAST Scan
     runs-on: ubuntu-latest
     steps:
-      # Clonar el repositorio
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      # Construir la imagen de Docker
       - name: Build Docker image
-        run: |
-          docker build -t ${{ env.IMAGE_TAG }} .
+        run: docker build -t ${{ env.IMAGE_TAG }} .
 
-      # Iniciar el contenedor con las variables de entorno necesarias
       - name: Start demo app container
         run: |
           docker rm -f demoApp || true
@@ -34,19 +30,12 @@ jobs:
             -e AZURE_COSMOS_DB_KEY=${{ secrets.AZURE_COSMOS_DB_KEY }} \
             --name demoApp ${{ env.IMAGE_TAG }}
 
-      # Inspeccionar los logs del contenedor para obtener detalles
       - name: Inspect container logs
-        run: |
-          echo "Inspeccionando los logs del contenedor..."
-          docker logs demoApp || true
+        run: docker logs demoApp || true
 
-      # Inspeccionar el estado del contenedor
-      - name: Inspect container status
-        run: |
-          echo "Inspeccionando el estado del contenedor..."
-          docker ps -a
+      - name: Inspect environment variables
+        run: docker exec demoApp printenv
 
-      # Esperar a que el contenedor esté listo
       - name: Wait for container to start
         run: |
           echo "Esperando que el contenedor esté disponible en localhost:3006..."
@@ -64,13 +53,9 @@ jobs:
           echo "El servicio no está disponible después de 5 minutos."
           exit 1
 
-      # Probar el endpoint del contenedor
       - name: Test container endpoint
-        run: |
-          echo "Probar el endpoint del contenedor..."
-          curl -i http://localhost:3006
+        run: curl -i http://localhost:3006
 
-      # Escaneo completo de seguridad con ZAP
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
@@ -80,14 +65,12 @@ jobs:
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
-      # Subir el reporte HTML generado por ZAP
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
           name: DAST_Report.html
           path: report_html.html
 
-      # Detener y limpiar el contenedor de Docker
       - name: Stop and clean up Docker container
         if: always()
         run: |
