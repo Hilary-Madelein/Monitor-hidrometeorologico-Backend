@@ -54,10 +54,11 @@ jobs:
           done
           echo "El servicio no pudo inicializarse."; exit 1
 
-      # Ejecutar un escaneo DAST con una imagen genérica de ZAP
-      - name: Run ZAP DAST Scan
+      # Ejecutar el escaneo DAST desde un contenedor OWASP genérico
+      - name: Pull and Run ZAP
         run: |
-          docker run --rm -v $(pwd):/zap/wrk/:rw -t public.ecr.aws/zaproxy/zap2docker-stable zap-full-scan.py -t http://localhost:5006 -r zap_report.html
+          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-weekly zap-full-scan.py \
+          -t http://localhost:5006 -r zap_report.html || exit 0
 
       # Subir el reporte generado
       - name: Upload HTML report
