@@ -29,7 +29,7 @@ jobs:
       # Iniciar el contenedor de la aplicación
       - name: Start demo app container
         run: |
-          docker run -d -p 3006:3006 --name demoApp \
+          docker run -d -p 5006:5006 --name demoApp \
             -e COSMOS_ENDPOINT=${{ secrets.COSMOS_ENDPOINT }} \
             -e COSMOS_KEY=${{ secrets.COSMOS_KEY }} \
             ${{ env.IMAGE_TAG }}
@@ -45,9 +45,9 @@ jobs:
       # Simplificado: Comprobar directamente si el endpoint está accesible
       - name: Test container endpoint
         run: |
-          echo "Verificando si el servicio responde en localhost:3006..."
+          echo "Verificando si el servicio responde en localhost:5006..."
           for i in {1..10}; do
-            if curl -s http://localhost:3006 > /dev/null; then
+            if curl -s http://localhost:5006 > /dev/null; then
               echo "El servicio está disponible."; exit 0;
             fi
             echo "Intento $i: El servicio no está disponible, reintentando...";
@@ -61,7 +61,7 @@ jobs:
         with:
           docker_name: 'owasp/zap2docker-stable'
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'http://localhost:3006'
+          target: 'http://localhost:5006'
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
