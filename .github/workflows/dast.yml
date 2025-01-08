@@ -17,19 +17,12 @@ jobs:
     name: DAST Scan
     runs-on: ubuntu-latest
     steps:
-      # Clonar el repositorio
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      # Autenticarse en Docker Hub
-      - name: Authenticate to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      # Construir la imagen de Docker
       - name: Build Docker image
         run: docker build -t ${{ env.IMAGE_TAG }} .
 
-      # Iniciar el contenedor de la aplicación
       - name: Start demo app container
         run: |
           docker run -d -p 5006:5006 --name demoApp \
@@ -37,15 +30,12 @@ jobs:
             -e COSMOS_KEY=${{ secrets.COSMOS_KEY }} \
             ${{ env.IMAGE_TAG }}
 
-      # Verificar si el contenedor está corriendo
       - name: Check container status
         run: docker ps
 
-      # Inspeccionar los logs del contenedor
       - name: Inspect container logs
         run: docker logs demoApp
 
-      # Verificar si el servicio está disponible
       - name: Test container endpoint
         run: |
           echo "Verificando si el servicio responde en localhost:5006..."
@@ -58,21 +48,17 @@ jobs:
           done
           echo "El servicio no pudo inicializarse."; exit 1
 
-      # Descargar y ejecutar ZAP Full Scan
       - name: Pull and Run ZAP
         run: |
-          docker pull owasp/zap2docker-stable
-          docker run --rm -v $(pwd):/zap/wrk:rw -t owasp/zap2docker-stable zap-full-scan.py \
-            -t http://localhost:5006 -r report.html
+          docker pull owasp/zap2docker-live
+          docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-live zap-full-scan.py -t http://localhost:5006 -r zap_report.html
 
-      # Subir el reporte generado
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
-          name: DAST_Report.html
-          path: report.html
+          name: ZAP_Report
+          path: zap_report.html
 
-      # Limpiar recursos de Docker
       - name: Stop and clean up Docker container
         if: always()
         run: |
