@@ -1,61 +1,49 @@
-name: 50 DAST Scan Docker Image
+name: DAST Scan
 
 on:
   workflow_dispatch:
-  workflow_call: 
-    inputs:
-      image-tag:
-        type: string
-        description: 'The name of the docker image to scan'
-        required: true
-
-
-env:
-  IMAGE_TAG: observatorio_backend:latest
 
 jobs:
   dast-scan:
     name: DAST Scan
     runs-on: ubuntu-latest
     steps:
-      # Clonar el repositorio
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      # Construir la imagen de Docker
-      - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_TAG }} .
+      - name: Authenticate to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Iniciar el contenedor de la aplicación
+      - name: Build Docker image
+        run: |
+          docker build -t observatorio_backend .
+
       - name: Start demo app container
         run: |
-          docker run -d -p 5006:5006 --name demoApp \
-            -e COSMOS_ENDPOINT=${{ secrets.COSMOS_ENDPOINT }} \
-            -e COSMOS_KEY=${{ secrets.COSMOS_KEY }} \
-            ${{ env.IMAGE_TAG }}
+          docker rm -f demoApp || true
+          docker run -d -p 5006:5006 --name demoApp observatorio_backend
 
-      # Verificar si el contenedor está corriendo
       - name: Check container status
         run: docker ps
 
-      # Inspeccionar los logs del contenedor
       - name: Inspect container logs
         run: docker logs demoApp
 
-      # Simplificado: Comprobar directamente si el endpoint está accesible
       - name: Test container endpoint
         run: |
           echo "Verificando si el servicio responde en localhost:5006..."
-          for i in {1..10}; do
-            if curl -s http://localhost:5006 > /dev/null; then
-              echo "El servicio está disponible."; exit 0;
-            fi
-            echo "Intento $i: El servicio no está disponible, reintentando...";
-            sleep 5;
+          for i in {1..30}; do
+              status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5006)
+              if [ "$status" -eq 200 ]; then
+                  echo "El servicio está disponible."
+                  exit 0
+              fi
+              echo "Intento $i: El servicio aún no está disponible, reintentando..."
+              sleep 5
           done
-          echo "El servicio no pudo inicializarse."; exit 1
+          echo "Error: El servicio no respondió después de 30 intentos."
+          exit 1
 
-      # Escaneo con OWASP ZAP
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
@@ -65,14 +53,12 @@ jobs:
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
-      # Subir el reporte generado
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
           name: DAST_Report.html
           path: report_html.html
 
-      # Limpiar los recursos de Docker
       - name: Stop and clean up Docker container
         if: always()
         run: |
