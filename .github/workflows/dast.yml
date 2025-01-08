@@ -45,7 +45,7 @@ jobs:
       - name: Inspect container logs
         run: docker logs demoApp
 
-      # Simplificado: Comprobar directamente si el endpoint está accesible
+      # Comprobar directamente si el endpoint está accesible
       - name: Test container endpoint
         run: |
           echo "Verificando si el servicio responde en localhost:5006..."
