@@ -7,6 +7,7 @@ on:
         type: string
         description: 'The name of the docker image to scan'
         required: true
+
 jobs:
   dast-scan:
     name: DAST Scan
@@ -15,15 +16,8 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Free port 5006 if in use
-        run: |
-          echo "Verificando si el puerto 5006 está en uso..."
-          if lsof -i :5006; then
-            echo "Puerto 5006 en uso. Matando proceso..."
-            fuser -k 5006/tcp || true
-          else
-            echo "Puerto 5006 está libre."
-          fi
+      - name: Authenticate to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image
         run: |
@@ -32,7 +26,7 @@ jobs:
       - name: Start demo app container
         run: |
           docker rm -f demoApp || true
-          docker run -d -p 5006:5006 --name demoApp observatorio_backend
+          docker run -d -p 9006:9006 --name demoApp observatorio_backend
 
       - name: Check container status
         run: docker ps
@@ -42,17 +36,17 @@ jobs:
 
       - name: Test container endpoint
         run: |
-          echo "Verificando si el servicio responde en localhost:5006..."
-          for i in {1..10}; do
-            if curl -s http://localhost:5006 > /dev/null; then
-              echo "El servicio está disponible."
-              exit 0
-            else
+          echo "Verificando si el servicio responde en localhost:9006..."
+          for i in {1..30}; do
+              status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9006)
+              if [ "$status" -eq 200 ]; then
+                  echo "El servicio está disponible."
+                  exit 0
+              fi
               echo "Intento $i: El servicio aún no está disponible, reintentando..."
               sleep 5
-            fi
           done
-          echo "Error: El servicio no respondió a tiempo."
+          echo "Error: El servicio no respondió después de 30 intentos."
           exit 1
 
       - name: ZAP Full Scan
@@ -60,7 +54,7 @@ jobs:
         with:
           docker_name: 'owasp/zap2docker-stable'
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'http://localhost:5006'
+          target: 'http://localhost:9006'
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
