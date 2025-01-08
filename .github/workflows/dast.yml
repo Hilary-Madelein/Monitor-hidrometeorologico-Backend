@@ -60,20 +60,16 @@ jobs:
 
       # Escaneo con OWASP ZAP
       - name: ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.11.0
-        with:
-          docker_name: 'owasp/zap2docker-stable'
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'http://localhost:5006'
-          cmd_options: '-a -j -l WARN -z "-addoninstallall"'
-          allow_issue_writing: false
+        run: |
+          docker pull owasp/zap2docker-stable
+          docker run -t owasp/zap2docker-stable zap-full-scan.py -t http://localhost:5006 -r report.html
 
       # Subir el reporte generado
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
           name: DAST_Report.html
-          path: report_html.html
+          path: report.html
 
       # Limpiar los recursos de Docker
       - name: Stop and clean up Docker container
