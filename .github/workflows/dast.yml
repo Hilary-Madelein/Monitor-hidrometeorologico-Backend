@@ -2,6 +2,7 @@ name: 50 DAST Scan Docker Image
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 env:
   IMAGE_TAG: observatorio_backend:latest
