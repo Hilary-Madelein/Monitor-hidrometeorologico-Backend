@@ -10,25 +10,6 @@ if (typeof global.AbortController === 'undefined') {
   global.AbortController = AbortController;
 }
 
-const cosmosDbUrl = process.env.AZURE_COSMOS_DB_URL || '';
-const cosmosDbKey = process.env.AZURE_COSMOS_DB_KEY || '';
-
-if (!cosmosDbUrl || !cosmosDbKey) {
-  console.error('Faltan las variables de entorno necesarias para conectar con Azure Cosmos DB.');
-  process.exit(1);
-}
-
-try {
-  const client = new CosmosClient({
-    endpoint: cosmosDbUrl,
-    key: cosmosDbKey,
-  });
-} catch (err) {
-  console.error('Error inicializando CosmosClient:', err.message);
-  process.exit(1);
-}
-
-
 // Cargar variables de entorno para Cosmos DB
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
