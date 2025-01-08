@@ -34,11 +34,17 @@ jobs:
             -e AZURE_COSMOS_DB_KEY=${{ secrets.AZURE_COSMOS_DB_KEY }} \
             --name demoApp ${{ env.IMAGE_TAG }}
 
-      # Inspeccionar los logs del contenedor
+      # Inspeccionar los logs del contenedor para obtener detalles
       - name: Inspect container logs
         run: |
           echo "Inspeccionando los logs del contenedor..."
-          docker logs demoApp
+          docker logs demoApp || true
+
+      # Inspeccionar el estado del contenedor
+      - name: Inspect container status
+        run: |
+          echo "Inspeccionando el estado del contenedor..."
+          docker ps -a
 
       # Esperar a que el contenedor esté listo
       - name: Wait for container to start
@@ -52,6 +58,7 @@ jobs:
               exit 0
             fi
             echo "El servicio aún no está disponible, reintentando..."
+            docker logs demoApp || true
             sleep 10
           done
           echo "El servicio no está disponible después de 5 minutos."
