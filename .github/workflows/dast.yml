@@ -1,60 +1,54 @@
 name: 50 DAST Scan Docker Image
 
 on:
-  workflow_call:
-    inputs:
-      image-tag:
-        type: string
-        description: 'The name of the docker image to scan'
-        required: true
+  workflow_dispatch:
 
 env:
-  IMAGE_TAG: ${{ inputs.image-tag }}
+  IMAGE_TAG: hidro-backend
 
 jobs:
   dast-scan:
     name: DAST Scan
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_TAG }} .
+        run: |
+          docker build -t ${{ env.IMAGE_TAG }} .
 
       - name: Start demo app container
         run: |
           docker rm -f demoApp || true
-          docker run -d -p 3006:3006 \
+          docker run -d -p 3006:3006 --name demoApp \
             -e AZURE_COSMOS_DB_URL=${{ secrets.AZURE_COSMOS_DB_URL }} \
             -e AZURE_COSMOS_DB_KEY=${{ secrets.AZURE_COSMOS_DB_KEY }} \
-            --name demoApp ${{ env.IMAGE_TAG }}
-
-      - name: Inspect environment variables
-        run: docker exec demoApp printenv || true
+            ${{ env.IMAGE_TAG }}
 
       - name: Inspect container logs
-        run: docker logs demoApp || true
+        run: docker logs demoApp
 
       - name: Wait for container to start
         run: |
           echo "Esperando que el contenedor esté disponible en localhost:3006..."
-          for i in {1..30}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3006 || true)
-            echo "HTTP status: $HTTP_STATUS"
-            if [ "$HTTP_STATUS" -eq 200 ]; then
+          for i in {1..20}; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3006 || echo "000")
+            echo "HTTP status: $status"
+            if [ "$status" == "200" ]; then
               echo "El servicio está disponible."
               exit 0
             fi
             echo "El servicio aún no está disponible, reintentando..."
-            docker logs demoApp || true
-            sleep 10
+            sleep 5
           done
-          echo "El servicio no está disponible después de 5 minutos."
+          echo "El servicio no se pudo iniciar."
+          docker logs demoApp
           exit 1
 
       - name: Test container endpoint
-        run: curl -i http://localhost:3006 || true
+        run: curl -i http://localhost:3006
 
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
@@ -65,8 +59,8 @@ jobs:
           cmd_options: '-a -j -l WARN -z "-addoninstallall"'
           allow_issue_writing: false
 
-      - name: Upload HTML report 
-        uses: actions/upload-artifact@v4
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v3
         with:
           name: DAST_Report.html
           path: report_html.html
