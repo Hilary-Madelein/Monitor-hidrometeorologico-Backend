@@ -1,10 +1,15 @@
-name: 50 DAST Scan Docker Image
+name: DAST Scan
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      image-tag:
+        type: string
+        description: 'The name of the docker image to scan'
+        required: true
 
 env:
-  IMAGE_TAG: hidro-backend
+  IMAGE_TAG: ${{ inputs.image-tag }}
 
 jobs:
   dast-scan:
