@@ -51,5 +51,3 @@ jobs:
     with:
       image-tag: 'observatorio_backend:latest'
     secrets: inherit
-
-
