@@ -17,7 +17,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_TAG: ghcr.io/owner/repository:${{ inputs.image-tag || 'latest' }}
+  IMAGE_TAG: ghcr.io/tu-usuario/tu-repositorio:latest
 
 jobs:
   dast-scan:
