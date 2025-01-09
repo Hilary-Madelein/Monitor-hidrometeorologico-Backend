@@ -2,12 +2,6 @@ name: 50 DAST Scan Docker Image
 
 on:
   workflow_dispatch:
-    inputs:
-      image-tag:
-        type: string
-        description: 'The name of the docker image to scan'
-        required: true
-  
   workflow_call:
     inputs:
       image-tag:
@@ -27,15 +21,17 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      # Construir la imagen de Docker (localmente)
+      # Construir la imagen de Docker
       - name: Build Docker image
         run: docker build -t ${{ env.IMAGE_TAG }} .
 
-      # Iniciar el contenedor de la aplicación usando la imagen local
+      # Iniciar el contenedor de la aplicación
       - name: Start demo app container
         run: |
-          docker rm -f demoApp || true
-          docker run -d -p 5006:5006 --name demoApp ${{ env.IMAGE_TAG }}
+          docker run -d -p 5006:5006 --name demoApp \
+            -e COSMOS_ENDPOINT=${{ secrets.COSMOS_ENDPOINT }} \
+            -e COSMOS_KEY=${{ secrets.COSMOS_KEY }} \
+            ${{ env.IMAGE_TAG }}
 
       # Verificar si el contenedor está corriendo
       - name: Check container status
@@ -58,18 +54,17 @@ jobs:
           done
           echo "El servicio no pudo inicializarse."; exit 1
 
-      # Ejecutar el escaneo DAST con Nikto
-      - name: Run Nikto Scan
+      # Ejecutar un escaneo DAST con una imagen genérica de ZAP
+      - name: Run ZAP DAST Scan
         run: |
-          docker pull sullo/nikto || exit 1
-          docker run --rm sullo/nikto -h http://localhost:5006 > nikto_report.txt || exit 1
+          docker run --rm -v $(pwd):/zap/wrk/:rw -t public.ecr.aws/zaproxy/zap2docker-stable zap-full-scan.py -t http://localhost:5006 -r zap_report.html
 
-      # Subir el reporte generado por Nikto
-      - name: Upload Nikto Report
+      # Subir el reporte generado
+      - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
-          name: Nikto_Report
-          path: nikto_report.txt
+          name: ZAP_Report
+          path: zap_report.html
 
       # Limpiar los recursos de Docker
       - name: Stop and clean up Docker container
