@@ -54,10 +54,12 @@ jobs:
           done
           echo "El servicio no pudo inicializarse."; exit 1
 
-      # Ejecutar el escaneo DAST con Nikto
+      # Intentar usar Nikto desde una imagen pública
       - name: Run Nikto Scan
         run: |
-          docker run --rm sullo/nikto -h http://localhost:5006 > nikto_report.txt || exit 0
+          echo "Verificando acceso a la imagen de Nikto..."
+          docker pull sullo/nikto || echo "La imagen no pudo ser descargada, intentaremos ejecutarla si ya está en el sistema."
+          docker run --rm sullo/nikto -h http://localhost:5006 > nikto_report.txt || exit 1
 
       # Subir el reporte generado por Nikto
       - name: Upload Nikto Report
