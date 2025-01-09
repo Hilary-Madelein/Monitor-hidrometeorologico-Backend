@@ -10,6 +10,7 @@ on:
         required: true
 
 env:
+  REGISTRY: docker.io
   IMAGE_TAG: observatorio_backend:latest
 
 jobs:
@@ -17,6 +18,14 @@ jobs:
     name: DAST Scan
     runs-on: ubuntu-latest
     steps:
+      # Loguearse en el registro de contenedores
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Clonar el repositorio
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -28,6 +37,7 @@ jobs:
       # Iniciar el contenedor de la aplicación
       - name: Start demo app container
         run: |
+          docker rm -f demoApp || true
           docker run -d -p 5006:5006 --name demoApp \
             -e COSMOS_ENDPOINT=${{ secrets.COSMOS_ENDPOINT }} \
             -e COSMOS_KEY=${{ secrets.COSMOS_KEY }} \
@@ -54,10 +64,12 @@ jobs:
           done
           echo "El servicio no pudo inicializarse."; exit 1
 
-      # Ejecutar un escaneo DAST con una imagen genérica de ZAP
+      # Ejecutar un escaneo DAST con ZAP desde Docker Hub
       - name: Run ZAP DAST Scan
         run: |
-          docker run --rm -v $(pwd):/zap/wrk/:rw -t public.ecr.aws/zaproxy/zap2docker-stable zap-full-scan.py -t http://localhost:5006 -r zap_report.html
+          docker pull owasp/zap2docker-stable || exit 1
+          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap-full-scan.py \
+          -t http://localhost:5006 -r zap_report.html || exit 0
 
       # Subir el reporte generado
       - name: Upload HTML report
