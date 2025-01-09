@@ -35,7 +35,7 @@ jobs:
       - name: Start demo app container
         run: |
           docker rm -f demoApp || true
-          docker run -d -p 3006:3006 --name demoApp ${{ env.IMAGE_TAG }}
+          docker run -d -p 5006:5006 --name demoApp ${{ env.IMAGE_TAG }}
 
       # Verificar si el contenedor está corriendo
       - name: Check container status
@@ -48,9 +48,9 @@ jobs:
       # Comprobar si el endpoint está accesible
       - name: Test container endpoint
         run: |
-          echo "Verificando si el servicio responde en localhost:3006..."
+          echo "Verificando si el servicio responde en localhost:5006..."
           for i in {1..10}; do
-            if curl -s http://localhost:3006 > /dev/null; then
+            if curl -s http://localhost:5006 > /dev/null; then
               echo "El servicio está disponible."; exit 0;
             fi
             echo "Intento $i: El servicio no está disponible, reintentando...";
@@ -62,7 +62,7 @@ jobs:
       - name: Run Nikto Scan
         run: |
           docker pull sullo/nikto || exit 1
-          docker run --rm sullo/nikto -h http://localhost:3006 > nikto_report.txt || exit 1
+          docker run --rm sullo/nikto -h http://localhost:5006 > nikto_report.txt || exit 1
 
       # Subir el reporte generado por Nikto
       - name: Upload Nikto Report
