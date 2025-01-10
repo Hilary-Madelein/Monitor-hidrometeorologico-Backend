@@ -63,16 +63,16 @@ jobs:
           target: 'http://localhost:5006'
           cmd_options: '-a'
           allow_issue_writing: false
-      
+
       # Ejecutar el escaneo DAST con Nikto
       - name: Run Nikto Scan
         uses: thereisnotime/action-nikto@master
         with:
           url: "http://localhost:5006"
-          additional_args: "-ssl"
+          additional_args: "-ssl -output nikto_report.txt"
 
-      # Subir el reporte generado
-      - name: Upload HTML report
+      # Subir el reporte generado por ZAP
+      - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         with:
           name: ZAP_Report
